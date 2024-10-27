@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
 import { verify } from "hono/jwt";
+import { createBlogType, updateBlogType } from "@harunath/mediumcommon";
 
 const blogRouter = new Hono<{
 	Bindings: {
@@ -15,7 +16,6 @@ const blogRouter = new Hono<{
 
 blogRouter.use("/*", async (c, next) => {
 	const authHeader = c.req.header("authorization") || "";
-	console.log(authHeader);
 	try {
 		const user = await verify(authHeader.split(" ")[1], c.env.JWT_SECRET);
 		if (user) {
@@ -42,6 +42,11 @@ blogRouter.post("/", async (c) => {
 		}).$extends(withAccelerate());
 		const userId = c.get("userId");
 		const body = await c.req.json();
+		const { success } = createBlogType.safeParse(body);
+		if (!success) {
+			c.status(400);
+			return c.json({ error: "invalid data" });
+		}
 		const blog = await prisma.post.create({
 			data: {
 				authorId: userId,
@@ -64,6 +69,11 @@ blogRouter.put("/", async (c) => {
 		}).$extends(withAccelerate());
 		const userId = c.get("userId");
 		const body = await c.req.json();
+		const { success } = updateBlogType.safeParse(body);
+		if (!success) {
+			c.status(400);
+			return c.json({ error: "invalid data" });
+		}
 		const blog = await prisma.post.update({
 			where: { id: body.blogId },
 			data: {
